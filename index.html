@@ -1189,7 +1189,19 @@
             return;
         }
 
+        // Define which columns are numeric and need a total
+        const numericCols = ['sp', 'mo', 'ts', 'jelly', 'noodles', 'gh', 'umilk', 'swift', 'ray', 'glitter', 'staysafe', 'rice', 'hf'];
+        
+        // Map data to the format expected by XLSX library and calculate totals
+        const totals = {};
+        numericCols.forEach(key => totals[key] = 0);
+
         const worksheetData = data.map(r => {
+            // Calculate totals in the loop
+            numericCols.forEach(key => {
+                totals[key] += Number(r[key]) || 0;
+            });
+            
             const row = {
                 'SL': r.sl, 'QR Code No': r.qr, 'Outlet Name': r.outlet, 'Address': r.address, 
                 'Mobile No': r.mobile, 'SP': r.sp, 'MO': r.mo, 'TS': r.ts, 'Jelly': r.jelly, 
@@ -1203,6 +1215,20 @@
             return row;
         });
 
+        // Create the total row object
+        const totalRow = { 'SL': 'Total' };
+        numericCols.forEach(key => {
+            // Map the internal key to the Excel header name
+            const headerMap = {
+                sp: 'SP', mo: 'MO', ts: 'TS', jelly: 'Jelly', noodles: 'Noodles', gh: 'GH', umilk: 'U.Milk',
+                swift: 'Swift', ray: 'RAY', glitter: 'Glitter', staysafe: 'Staysafe', rice: 'Rice', hf: 'HF'
+            };
+            totalRow[headerMap[key]] = totals[key];
+        });
+
+        // Add the total row to the worksheet data
+        worksheetData.push(totalRow);
+
         const worksheet = XLSX.utils.json_to_sheet(worksheetData);
         const workbook = XLSX.utils.book_new();
         XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered Reports");
@@ -1214,4 +1240,4 @@
 </script>
 </body>
 </html>
-
+    
