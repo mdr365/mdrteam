@@ -1,0 +1,1216 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sales Report App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+    <style>
+        :root {
+            --primary-color: #4a90e2;
+            --secondary-color: #f5a623;
+            --background-color: #f0f2f5;
+            --text-color: #333;
+            --white-color: #fff;
+            --danger-color: #d0021b;
+            --success-color: #7ed321;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            background-color: var(--background-color);
+            color: var(--text-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        #login-page, #dashboard-page {
+            background: var(--white-color);
+            padding: 40px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            width: 100%;
+        }
+        
+        @media (max-width: 600px) {
+            #login-page {
+                padding: 20px;
+            }
+        }
+
+        h1, h2 {
+            color: var(--primary-color);
+            text-align: center;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        input[type="text"], input[type="password"], select, input[type="date"] {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            text-transform: uppercase;
+            transition: background-color 0.3s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary-color);
+            color: var(--white-color);
+        }
+
+        .btn-primary:hover {
+            background-color: #357ABD;
+        }
+
+        .btn-danger {
+            background-color: var(--danger-color);
+            color: var(--white-color);
+        }
+
+        .btn-secondary {
+            background-color: var(--secondary-color);
+            color: var(--white-color);
+        }
+
+        #dashboard-page {
+            display: none;
+        }
+
+        #dashboard-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .dashboard-layout {
+            display: flex;
+        }
+        
+        .sidebar {
+            width: 200px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 1px solid #eee;
+        }
+        
+        .sidebar-menu {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .sidebar-menu li {
+            margin-bottom: 10px;
+        }
+        
+        .sidebar-menu a {
+            display: block;
+            padding: 10px;
+            text-decoration: none;
+            color: var(--text-color);
+            border-radius: 4px;
+            transition: background-color 0.3s;
+        }
+        
+        .sidebar-menu a:hover, .sidebar-menu a.active {
+            background-color: var(--primary-color);
+            color: var(--white-color);
+        }
+        
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+        }
+        
+        .summary-boxes {
+            display: flex;
+            gap: 20px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        .summary-box {
+            flex: 1;
+            min-width: 200px;
+            padding: 20px;
+            border-radius: 8px;
+            color: var(--white-color);
+            text-align: center;
+        }
+
+        .summary-box h3 {
+            margin: 0 0 10px 0;
+            color: var(--white-color);
+        }
+
+        .summary-box p {
+            font-size: 24px;
+            margin: 0;
+            font-weight: bold;
+        }
+
+        .tsm-box { background-color: var(--primary-color); }
+        .mdr-box { background-color: var(--secondary-color); }
+        .outlet-box { background-color: var(--success-color); }
+        
+        .chart-container {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+        
+        .vertical-chart-container {
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            height: 0.45in;
+            border-left: 2px solid #ccc;
+            border-bottom: 2px solid #ccc;
+            padding-top: 10px;
+        }
+
+        .vertical-chart-bar-group {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            flex-grow: 1;
+            text-align: center;
+        }
+
+        .vertical-chart-bar {
+            width: 50%;
+            background-color: var(--primary-color);
+            transition: height 0.5s ease-in-out;
+            position: relative;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .vertical-chart-bar .bar-value {
+            color: white;
+            font-size: 14px;
+            font-weight: bold;
+            position: absolute;
+            top: -20px;
+        }
+
+        .vertical-chart-label {
+            margin-top: 8px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f8f9fa;
+            font-weight: 600;
+        }
+        
+        .table-container {
+            max-height: 600px;
+            overflow-y: auto;
+        }
+
+        thead th {
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        
+        tfoot td {
+            font-weight: bold;
+            background-color: #f8f9fa;
+        }
+
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.5);
+        }
+
+        .modal-content {
+            background-color: #fefefe;
+            margin: 5% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 800px;
+            border-radius: 8px;
+        }
+
+        .close-btn {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Login Page -->
+        <div id="login-page">
+            <h1>Login</h1>
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" placeholder="Enter your username">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" placeholder="Enter your password">
+            </div>
+            <div class="form-group">
+                <label for="role">Role</label>
+                <select id="role">
+                    <option value="admin">Admin</option>
+                    <option value="tsm">TSM</option>
+                    <option value="mdr">MDR</option>
+                </select>
+            </div>
+            <button class="btn btn-primary" onclick="login()">Login</button>
+            <p id="login-error" style="color:red;"></p>
+        </div>
+
+        <!-- Dashboard Page -->
+        <div id="dashboard-page">
+            <div id="dashboard-header">
+                <h2 id="dashboard-title">Dashboard</h2>
+                <button class="btn btn-danger" onclick="logout()">Logout</button>
+            </div>
+            <div id="dashboard-content"></div>
+        </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="user-modal" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <span class="close-btn" onclick="closeModal('user-modal')">&times;</span>
+            <h2 id="user-modal-title"></h2>
+            <div class="form-group">
+                <label for="modal-username">Username</label>
+                <input type="text" id="modal-username">
+            </div>
+            <div class="form-group">
+                <label for="modal-password">Password</label>
+                <input type="password" id="modal-password">
+            </div>
+            <input type="hidden" id="edit-user-index">
+            <input type="hidden" id="user-role-to-add">
+            <button class="btn btn-primary" id="save-user-btn" onclick="saveUser()">Save</button>
+        </div>
+    </div>
+
+    <div id="report-modal" class="modal">
+      <div class="modal-content">
+        <span class="close-btn" onclick="closeModal('report-modal')">&times;</span>
+        <h2 id="report-modal-title">Add Report</h2>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px;">
+            <div class="form-group"><label>SL</label><input type="text" id="report-sl"></div>
+            <div class="form-group"><label>QR Code No</label><input type="text" id="report-qr"></div>
+            <div class="form-group"><label>Outlet Name</label><input type="text" id="report-outlet"></div>
+            <div class="form-group"><label>Address</label><input type="text" id="report-address"></div>
+            <div class="form-group"><label>Mobile No</label><input type="text" id="report-mobile"></div>
+            <div class="form-group"><label>SP</label><input type="text" id="report-sp"></div>
+            <div class="form-group"><label>MO</label><input type="text" id="report-mo"></div>
+            <div class="form-group"><label>TS</label><input type="text" id="report-ts"></div>
+            <div class="form-group"><label>Jelly</label><input type="text" id="report-jelly"></div>
+            <div class="form-group"><label>Noodles</label><input type="text" id="report-noodles"></div>
+            <div class="form-group"><label>GH</label><input type="text" id="report-gh"></div>
+            <div class="form-group"><label>U.Milk</label><input type="text" id="report-umilk"></div>
+            <div class="form-group"><label>Swift</label><input type="text" id="report-swift"></div>
+            <div class="form-group"><label>RAY</label><input type="text" id="report-ray"></div>
+            <div class="form-group"><label>Glitter</label><input type="text" id="report-glitter"></div>
+            <div class="form-group"><label>Staysafe</label><input type="text" id="report-staysafe"></div>
+            <div class="form-group"><label>Rice</label><input type="text" id="report-rice"></div>
+            <div class="form-group"><label>HF</label><input type="text" id="report-hf"></div>
+            <div class="form-group">
+                <label>Working day</label>
+                <select id="report-workingday">
+                    <option value="Saturday">Saturday</option>
+                    <option value="Sunday">Sunday</option>
+                    <option value="Monday">Monday</option>
+                    <option value="Tuesday">Tuesday</option>
+                    <option value="Wednesday">Wednesday</option>
+                    <option value="Thursday">Thursday</option>
+                </select>
+            </div>
+            <div class="form-group"><label>SR Name</label><input type="text" id="report-srname"></div>
+            <div class="form-group"><label>Market</label><input type="text" id="report-market"></div>
+        </div>
+        <input type="hidden" id="editing-report-sl">
+        <button class="btn btn-primary" onclick="saveReport()">Save Report</button>
+      </div>
+    </div>
+
+<script>
+    const firebaseConfig = {
+        apiKey: "AIzaSyA7uwjVpanByYk6WBSqiNQq5khr43UU7O0",
+        authDomain: "uuuu-d2c99.firebaseapp.com",
+        databaseURL: "https://uuuu-d2c99-default-rtdb.asia-southeast1.firebasedatabase.app",
+        projectId: "uuuu-d2c99",
+        storageBucket: "uuuu-d2c99.appspot.com",
+        messagingSenderId: "995721044919",
+        appId: "1:995721044919:web:3f0af9f02e8a453d213e32",
+        measurementId: "G-7RYTE52ZEK"
+    };
+
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
+
+    // --- APP INITIALIZATION ---
+    document.addEventListener('DOMContentLoaded', async () => {
+        const usersRef = database.ref('users');
+        const snapshot = await usersRef.once('value');
+        if (!snapshot.exists()) {
+            usersRef.set({
+                admin: { 'admin': { username: 'admin', password: '123' } },
+                tsm: {},
+                mdr: {}
+            });
+        }
+        
+        const loggedInUser = sessionStorage.getItem('loggedInUser');
+        if (loggedInUser) {
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('dashboard-page').style.display = 'block';
+            renderDashboard();
+        }
+    });
+
+    // --- FIREBASE HELPER FUNCTIONS ---
+    const getUsers = async () => (await database.ref('users').once('value')).val() || {};
+    const getReports = async () => (await database.ref('reports').once('value')).val() || {};
+
+    // --- LOGIN / LOGOUT ---
+    async function login() {
+        const username = document.getElementById('username').value;
+        const password = document.getElementById('password').value;
+        const role = document.getElementById('role').value;
+        const users = await getUsers();
+        const user = Object.values(users[role] || {}).find(u => u.username === username && u.password === password);
+
+        if (user) {
+            sessionStorage.setItem('loggedInUser', JSON.stringify({ username, role }));
+            document.getElementById('login-page').style.display = 'none';
+            document.getElementById('dashboard-page').style.display = 'block';
+            renderDashboard();
+        } else {
+            document.getElementById('login-error').innerText = 'Invalid credentials!';
+        }
+    }
+
+    function logout() {
+        sessionStorage.removeItem('loggedInUser');
+        window.location.reload();
+    }
+
+    // --- DASHBOARD RENDERING ---
+    function renderDashboard() {
+        const user = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        if (!user) return;
+        document.getElementById('dashboard-title').innerText = `${user.role.toUpperCase()} Dashboard`;
+        const content = document.getElementById('dashboard-content');
+        content.innerHTML = '';
+        switch (user.role) {
+            case 'admin': renderAdminDashboard(content); break;
+            case 'tsm': renderTsmDashboard(content); break;
+            case 'mdr': renderMdrDashboard(content); break;
+        }
+    }
+
+    // --- ADMIN DASHBOARD ---
+    function renderAdminDashboard(container) {
+        container.innerHTML = `
+            <div class="dashboard-layout">
+                <div class="sidebar">
+                    <ul class="sidebar-menu" id="admin-menu">
+                        <li><a href="#" onclick="showAdminContent('home')" class="active">Home</a></li>
+                        <li><a href="#" onclick="showAdminContent('tsm')">Create TSM</a></li>
+                    </ul>
+                </div>
+                <div class="main-content" id="main-content"></div>
+            </div>`;
+        showAdminContent('home');
+    }
+
+    async function showAdminContent(contentType) {
+        document.querySelectorAll('#admin-menu a').forEach(item => item.classList.remove('active'));
+        document.querySelector(`#admin-menu a[onclick="showAdminContent('${contentType}')"]`).classList.add('active');
+        const content = document.getElementById('main-content');
+        
+        if (contentType === 'home') {
+            const users = await getUsers();
+            const tsmCount = users.tsm ? Object.keys(users.tsm).length : 0;
+            const mdrCount = users.mdr ? Object.keys(users.mdr).length : 0;
+            content.innerHTML = `
+                <h2>Dashboard Overview</h2>
+                <div class="summary-boxes">
+                    <div class="summary-box tsm-box"><h3>Total TSMs</h3><p>${tsmCount}</p></div>
+                    <div class="summary-box mdr-box"><h3>Total MDRs</h3><p>${mdrCount}</p></div>
+                </div>`;
+        } else if (contentType === 'tsm') {
+            content.innerHTML = `
+                <button class="btn btn-primary" onclick="openUserModal('tsm')">Create TSM</button>
+                <div id="tsm-list"></div>`;
+            renderUserList('tsm');
+        }
+    }
+
+    // --- TSM DASHBOARD ---
+    function renderTsmDashboard(container) {
+        container.innerHTML = `
+            <div class="dashboard-layout">
+                <div class="sidebar">
+                    <ul class="sidebar-menu" id="tsm-menu">
+                        <li><a href="#" onclick="showTsmContent('home')" class="active">Home</a></li>
+                        <li><a href="#" onclick="showTsmContent('create_mdr')">Create MDR</a></li>
+                        <li><a href="#" onclick="showTsmContent('filter')">Filter & Export</a></li>
+                    </ul>
+                </div>
+                <div class="main-content" id="main-content"></div>
+            </div>`;
+        showTsmContent('home');
+    }
+
+    async function showTsmContent(contentType) {
+        document.querySelectorAll('#tsm-menu a').forEach(item => item.classList.remove('active'));
+        document.querySelector(`#tsm-menu a[onclick="showTsmContent('${contentType}')"]`).classList.add('active');
+        const content = document.getElementById('main-content');
+        const user = JSON.parse(sessionStorage.getItem('loggedInUser'));
+
+        if (contentType === 'home') {
+            const users = await getUsers();
+            const reports = await getReports();
+            const myMDRs = users.mdr ? Object.values(users.mdr).filter(mdr => mdr.createdBy === user.username) : [];
+            const myMDRUsernames = myMDRs.map(mdr => mdr.username);
+            const allReportsForMyMDRs = Object.values(reports).filter(report => myMDRUsernames.includes(report.createdBy));
+            
+            const mdrReportCounts = myMDRs.map(mdr => {
+                const count = allReportsForMyMDRs.filter(report => report.createdBy === mdr.username).length;
+                return { username: mdr.username, count: count };
+            });
+
+            const maxCount = Math.max(...mdrReportCounts.map(item => item.count), 0);
+            const colors = ['#4a90e2', '#f5a623', '#7ed321', '#d0021b', '#8b572a', '#bd10e0', '#4a4a4a'];
+            
+            let chartHtml = `
+                <h2>MDR Outlet Report</h2>
+                <div class="chart-container">
+                    <div class="vertical-chart-container">`;
+
+            mdrReportCounts.forEach((item, index) => {
+                const heightPercentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+                const color = colors[index % colors.length];
+                chartHtml += `
+                    <div class="vertical-chart-bar-group">
+                        <div class="vertical-chart-bar" style="height: ${heightPercentage}%; background-color: ${color};">
+                             <span class="bar-value">${item.count}</span>
+                        </div>
+                        <div class="vertical-chart-label">${item.username}</div>
+                    </div>
+                `;
+            });
+            chartHtml += '</div></div>';
+
+            const mdrCount = myMDRs.length;
+            const totalOutlets = allReportsForMyMDRs.length;
+            content.innerHTML = `
+                ${chartHtml}
+                <h2>Dashboard Overview</h2>
+                <div class="summary-boxes">
+                    <div class="summary-box mdr-box"><h3>Total MDRs Created</h3><p>${mdrCount}</p></div>
+                    <div class="summary-box outlet-box"><h3>Total Outlets Created</h3><p>${totalOutlets}</p></div>
+                </div>`;
+
+        } else if (contentType === 'create_mdr') {
+            content.innerHTML = `
+                <button class="btn btn-primary" onclick="openUserModal('mdr')">Create MDR</button>
+                <div id="mdr-list"></div>`;
+            renderUserList('mdr', user.username);
+        } else if (contentType === 'filter') {
+            content.innerHTML = `
+                <h2>Filter and Export Reports</h2>
+                <div style="display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="mdr-filter">Filter by MDR:</label>
+                        <select id="mdr-filter"></select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="market-filter">Filter by Market:</label>
+                        <select id="market-filter"></select>
+                    </div>
+                    <button class="btn btn-primary" onclick="filterReportsForTSM()">Filter</button>
+                </div>
+                <div id="filtered-reports-container"></div>`;
+            await populateTsmFilters();
+        }
+    }
+    
+    // --- MDR DASHBOARD ---
+    function renderMdrDashboard(container) {
+        container.innerHTML = `
+            <div class="dashboard-layout">
+                <div class="sidebar">
+                    <ul class="sidebar-menu" id="mdr-menu">
+                        <li><a href="#" onclick="showMdrContent('home')" class="active">Home</a></li>
+                        <li><a href="#" onclick="showMdrContent('all_outlet_list')">All Outlet List</a></li>
+                        <li><a href="#" onclick="showMdrContent('add_outlet')">Add Outlet</a></li>
+                        <li><a href="#" onclick="showMdrContent('edit_outlet')">Edit Outlet</a></li>
+                        <li><a href="#" onclick="showMdrContent('delete_outlet')">Delete Outlet</a></li>
+                        <li><a href="#" onclick="showMdrContent('filter_export')">Filter and Export</a></li>
+                        <li><a href="#" onclick="showMdrContent('shift_outlet')">Shift Outlet</a></li>
+                    </ul>
+                </div>
+                <div class="main-content" id="main-content"></div>
+            </div>`;
+        showMdrContent('home');
+    }
+
+    async function showMdrContent(contentType) {
+        document.querySelectorAll('#mdr-menu a').forEach(item => item.classList.remove('active'));
+        document.querySelector(`#mdr-menu a[onclick="showMdrContent('${contentType}')"]`).classList.add('active');
+        const content = document.getElementById('main-content');
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        
+        if (contentType === 'home') {
+            const reports = await getReports();
+            const myReports = Object.values(reports).filter(r => r.createdBy === loggedInUser.username);
+            const reportCount = myReports.length;
+
+            const srReportCounts = myReports.reduce((acc, report) => {
+                const srName = report.srname || 'N/A';
+                acc[srName] = (acc[srName] || 0) + 1;
+                return acc;
+            }, {});
+
+            const chartData = Object.entries(srReportCounts).map(([srname, count]) => ({ srname, count }));
+            const maxCount = Math.max(...chartData.map(item => item.count), 0);
+            const colors = ['#4a90e2', '#f5a623', '#7ed321', '#d0021b', '#8b572a', '#bd10e0', '#4a4a4a'];
+
+            let chartHtml = `
+                <h2>SR Outlet Report</h2>
+                <div class="chart-container">
+                    <div class="vertical-chart-container">`;
+            
+            chartData.forEach((item, index) => {
+                const heightPercentage = maxCount > 0 ? (item.count / maxCount) * 100 : 0;
+                const color = colors[index % colors.length];
+                chartHtml += `
+                    <div class="vertical-chart-bar-group">
+                        <div class="vertical-chart-bar" style="height: ${heightPercentage}%; background-color: ${color};">
+                            <span class="bar-value">${item.count}</span>
+                        </div>
+                        <div class="vertical-chart-label">${item.srname}</div>
+                    </div>
+                `;
+            });
+            chartHtml += '</div></div>';
+
+            content.innerHTML = `
+                ${chartHtml}
+                <h2>Dashboard Overview</h2>
+                <div class="summary-boxes">
+                    <div class="summary-box tsm-box"><h3>Total Outlets Created</h3><p>${reportCount}</p></div>
+                </div>`;
+        } else if (contentType === 'all_outlet_list') {
+            content.innerHTML = `<h2>My Outlet List</h2><div id="my-reports"></div>`;
+            renderReportList('mdr');
+        } else if (contentType === 'add_outlet') {
+            openReportModal();
+        } else if (contentType === 'edit_outlet') {
+             content.innerHTML = `<h2>Edit Outlet</h2>
+                <div class="form-group">
+                    <label for="search-outlet-edit">Search by Outlet Name:</label>
+                    <input type="text" id="search-outlet-edit" onkeyup="searchMyOutlets('edit')">
+                </div>
+                <div id="edit-outlet-list"></div>`;
+        } else if (contentType === 'delete_outlet') {
+            content.innerHTML = `<h2>Delete Outlet</h2>
+                 <div class="form-group">
+                    <label for="search-outlet-delete">Search by Outlet Name:</label>
+                    <input type="text" id="search-outlet-delete" onkeyup="searchMyOutlets('delete')">
+                </div>
+                <div id="delete-outlet-list"></div>`;
+        } else if (contentType === 'filter_export') {
+            content.innerHTML = `
+                <h2>Filter and Export My Reports</h2>
+                <div style="display: flex; gap: 20px; align-items: flex-end; margin-bottom: 20px;">
+                    <div class="form-group" style="flex: 1;">
+                        <label for="mdr-market-filter">Filter by Market:</label>
+                        <select id="mdr-market-filter"></select>
+                    </div>
+                    <div class="form-group" style="flex: 1;">
+                        <label for="mdr-sr-filter">Filter by SR Name:</label>
+                        <select id="mdr-sr-filter"></select>
+                    </div>
+                    <button class="btn btn-primary" onclick="filterReportsForMDR()">Filter</button>
+                </div>
+                <div id="mdr-filtered-reports-container"></div>`;
+            await populateMdrFilters();
+        } else if (contentType === 'shift_outlet') {
+            content.innerHTML = `<h2>Shift Outlet</h2>
+                <div class="form-group">
+                    <label for="shift-outlet-select">Select Outlet to Shift:</label>
+                    <select id="shift-outlet-select"></select>
+                </div>
+                <div class="form-group">
+                    <label for="shift-mdr-select">Select MDR to Shift To:</label>
+                    <select id="shift-mdr-select"></select>
+                </div>
+                <button class="btn btn-primary" onclick="shiftOutlet()">Shift Outlet</button>`;
+            await populateShiftOutletDropdowns();
+        }
+    }
+
+    // --- USER MANAGEMENT ---
+    async function renderUserList(role, createdBy = null) {
+        const users = await getUsers();
+        const userList = users[role] ? Object.values(users[role]).filter(u => !createdBy || u.createdBy === createdBy) : [];
+        const listContainer = document.getElementById(role === 'tsm' ? 'tsm-list' : 'mdr-list');
+        if(!listContainer) return;
+
+        let table = `<h3>${role.toUpperCase()}s</h3><table><thead><tr><th>Username</th><th>Actions</th></tr></thead><tbody>`;
+        userList.forEach((user) => {
+            table += `<tr>
+                        <td>${user.username}</td>
+                        <td>
+                            <button class="btn btn-primary btn-sm" onclick="openUserModal('${role}', '${user.username}')">Edit</button>
+                            <button class="btn btn-danger btn-sm" onclick="deleteUser('${role}', '${user.username}')">Delete</button>
+                        </td>
+                      </tr>`;
+        });
+        listContainer.innerHTML = table + '</tbody></table>';
+    }
+
+    async function openUserModal(role, username = null) {
+        document.getElementById('user-role-to-add').value = role;
+        const modal = document.getElementById('user-modal');
+        const usernameInput = document.getElementById('modal-username');
+        
+        if (username) {
+            const user = (await getUsers())[role][username];
+            document.getElementById('user-modal-title').innerText = `Edit ${role.toUpperCase()}`;
+            usernameInput.value = user.username;
+            usernameInput.disabled = true; 
+            document.getElementById('modal-password').value = user.password;
+            document.getElementById('edit-user-index').value = username;
+        } else {
+            document.getElementById('user-modal-title').innerText = `Create ${role.toUpperCase()}`;
+            usernameInput.value = '';
+            usernameInput.disabled = false;
+            document.getElementById('modal-password').value = '';
+            document.getElementById('edit-user-index').value = '';
+        }
+        modal.style.display = 'block';
+    }
+
+    async function saveUser() {
+        const role = document.getElementById('user-role-to-add').value;
+        const username = document.getElementById('modal-username').value;
+        const password = document.getElementById('modal-password').value;
+        const editUsername = document.getElementById('edit-user-index').value;
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+
+        const newUser = { username, password };
+        if (role === 'mdr') newUser.createdBy = loggedInUser.username;
+
+        await database.ref(`users/${role}/${editUsername || username}`).set(newUser);
+        closeModal('user-modal');
+        
+        if (loggedInUser.role === 'admin') showAdminContent('tsm');
+        else showTsmContent('create_mdr');
+    }
+    
+    async function deleteUser(role, username) {
+        if (confirm(`Are you sure you want to delete ${username}?`)) {
+            await database.ref(`users/${role}/${username}`).remove();
+            const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+            if (loggedInUser.role === 'admin') showAdminContent('tsm');
+            else showTsmContent('create_mdr');
+        }
+    }
+
+    // --- REPORT MANAGEMENT ---
+    async function renderReportList(role) {
+        const reports = await getReports();
+        const users = await getUsers();
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        let userReports = [];
+
+        if (role === 'mdr') {
+            userReports = Object.values(reports).filter(r => r.createdBy === loggedInUser.username);
+        } else if (role === 'tsm') {
+            const myMDRs = users.mdr ? Object.values(users.mdr).filter(mdr => mdr.createdBy === loggedInUser.username).map(mdr => mdr.username) : [];
+            userReports = Object.values(reports).filter(r => myMDRs.includes(r.createdBy));
+        }
+
+        const container = document.getElementById(role === 'mdr' ? 'my-reports' : 'mdr-reports');
+        if (!container) return;
+        
+        const headers = ['SL', 'QR', 'Outlet Name', 'Address', 'Mobile', 'SP', 'MO', 'TS', 'Jelly', 'Noodles', 'GH', 'U.Milk', 'Swift', 'RAY', 'Glitter', 'Staysafe', 'Rice', 'HF', 'Working day', 'SR Name', 'Market', 'Actions'];
+        const numericCols = ['sp', 'mo', 'ts', 'jelly', 'noodles', 'gh', 'umilk', 'swift', 'ray', 'glitter', 'staysafe', 'rice', 'hf'];
+        const totals = {};
+        headers.forEach(h => {
+             const key = h.toLowerCase().replace(/[.\s-]/g, '');
+             totals[key] = 0;
+        });
+        
+        let tableBody = '';
+        userReports.forEach((report) => {
+             let rowHtml = '<tr>';
+             headers.forEach(header => {
+                if (header === 'Actions') return;
+                let key = header.toLowerCase().replace(/[.\s-]/g, '');
+                if (key === 'outletname') key = 'outlet'; // map to data key
+                const value = report[key] || '';
+                if (numericCols.includes(key)) {
+                    totals[key] += Number(value) || 0;
+                }
+                rowHtml += `<td>${value}</td>`;
+             });
+             rowHtml += `<td><button class="btn btn-danger btn-sm" onclick="deleteReport('${report.sl}')">Delete</button></td></tr>`;
+             tableBody += rowHtml;
+        });
+
+        let footer = '<tfoot><tr>' + headers.map(header => {
+             let key = header.toLowerCase().replace(/[.\s-]/g, '');
+             if (key === 'outletname') key = 'outlet';
+             if (key === 'sl') return `<td>Total</td>`;
+             if (numericCols.includes(key)) return `<td>${totals[key]}</td>`;
+             if (header === 'Actions') return `<td></td>`;
+             return `<td></td>`;
+        }).join('') + '</tr></tfoot>';
+
+        container.innerHTML = `<div class="table-container"><table>
+            <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+            <tbody>${tableBody}</tbody>
+            ${footer}
+            </table></div>`;
+    }
+    
+    function openReportModal(sl = null) {
+        const modal = document.getElementById('report-modal');
+        const title = document.getElementById('report-modal-title');
+        const slInput = document.getElementById('report-sl');
+        const editingSlInput = document.getElementById('editing-report-sl');
+
+        // Reset form
+        modal.querySelectorAll('input, select').forEach(input => {
+            if (input.type === 'hidden') return;
+            if (input.tagName === 'SELECT') {
+                input.selectedIndex = 0;
+            } else {
+                input.value = '';
+            }
+        });
+
+        if (sl) {
+            title.innerText = "Edit Outlet";
+            slInput.disabled = true;
+            editingSlInput.value = sl;
+            // Fetch and fill data
+            database.ref(`reports/${sl}`).once('value').then(snapshot => {
+                const report = snapshot.val();
+                if (report) {
+                    Object.keys(report).forEach(key => {
+                        let inputId = `report-${key}`;
+                        // Handle key mismatches
+                        if (key === 'outlet') inputId = 'report-outlet';
+                        
+                        const input = document.getElementById(inputId);
+                        if(input) input.value = report[key];
+                    });
+                }
+            });
+        } else {
+            title.innerText = "Add Outlet";
+            slInput.disabled = false;
+            editingSlInput.value = '';
+        }
+        modal.style.display = 'block';
+    }
+
+    async function saveReport() {
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        const editingSl = document.getElementById('editing-report-sl').value;
+        const sl = editingSl || document.getElementById('report-sl').value;
+        const outletName = document.getElementById('report-outlet').value;
+
+        if (!sl || !outletName) {
+            alert('SL and Outlet Name fields cannot be empty!');
+            return;
+        }
+
+        const newReport = {
+            sl,
+            qr: document.getElementById('report-qr').value,
+            outlet: outletName,
+            address: document.getElementById('report-address').value,
+            mobile: document.getElementById('report-mobile').value,
+            sp: document.getElementById('report-sp').value,
+            mo: document.getElementById('report-mo').value,
+            ts: document.getElementById('report-ts').value,
+            jelly: document.getElementById('report-jelly').value,
+            noodles: document.getElementById('report-noodles').value,
+            gh: document.getElementById('report-gh').value,
+            umilk: document.getElementById('report-umilk').value,
+            swift: document.getElementById('report-swift').value,
+            ray: document.getElementById('report-ray').value,
+            glitter: document.getElementById('report-glitter').value,
+            staysafe: document.getElementById('report-staysafe').value,
+            rice: document.getElementById('report-rice').value,
+            hf: document.getElementById('report-hf').value,
+            workingday: document.getElementById('report-workingday').value,
+            srname: document.getElementById('report-srname').value,
+            market: document.getElementById('report-market').value,
+            createdBy: loggedInUser.username,
+            createdAt: new Date().toISOString()
+        };
+
+        if (editingSl) {
+            const existingReport = (await database.ref(`reports/${editingSl}`).once('value')).val();
+            if(existingReport) {
+                newReport.createdBy = existingReport.createdBy;
+                newReport.createdAt = existingReport.createdAt;
+            }
+        }
+
+        await database.ref(`reports/${sl}`).set(newReport);
+        closeModal('report-modal');
+        document.querySelector('#mdr-menu a.active').click();
+    }
+
+    async function deleteReport(sl) {
+        if (confirm(`Are you sure you want to delete report SL:${sl}?`)) {
+            await database.ref(`reports/${sl}`).remove();
+            renderDashboard();
+        }
+    }
+    
+    async function searchMyOutlets(mode) { // mode can be 'edit' or 'delete'
+        const searchTerm = document.getElementById(`search-outlet-${mode}`).value.toLowerCase();
+        const listContainer = document.getElementById(`${mode}-outlet-list`);
+        if (!searchTerm) {
+            listContainer.innerHTML = '';
+            return;
+        }
+
+        const reports = await getReports();
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        const myReports = Object.values(reports)
+            .filter(r => r.createdBy === loggedInUser.username && r.outlet && r.outlet.toLowerCase().includes(searchTerm));
+
+        if (myReports.length === 0) {
+            listContainer.innerHTML = '<p>No outlets found.</p>';
+            return;
+        }
+
+        let table = '<table><thead><tr><th>Outlet Name</th><th>Address</th><th>Actions</th></tr></thead><tbody>';
+        myReports.forEach(report => {
+            table += `<tr>
+                <td>${report.outlet}</td>
+                <td>${report.address}</td>
+                <td>
+                    ${mode === 'edit' ? `<button class="btn btn-primary btn-sm" onclick="openReportModal('${report.sl}')">Edit</button>` : ''}
+                    ${mode === 'delete' ? `<button class="btn btn-danger btn-sm" onclick="deleteReport('${report.sl}')">Delete</button>` : ''}
+                </td>
+            </tr>`;
+        });
+        table += '</tbody></table>';
+        listContainer.innerHTML = table;
+    }
+
+    async function populateShiftOutletDropdowns() {
+        const users = await getUsers();
+        const reports = await getReports();
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        
+        const outletSelect = document.getElementById('shift-outlet-select');
+        const mdrSelect = document.getElementById('shift-mdr-select');
+
+        // Populate outlets
+        outletSelect.innerHTML = '<option value="">Select an Outlet</option>';
+        const myReports = Object.values(reports).filter(r => r.createdBy === loggedInUser.username);
+        myReports.forEach(r => {
+            outletSelect.innerHTML += `<option value="${r.sl}">${r.outlet}</option>`;
+        });
+
+        // Populate other MDRs under the same TSM
+        mdrSelect.innerHTML = '<option value="">Select an MDR</option>';
+        const myUserData = (await database.ref(`users/mdr/${loggedInUser.username}`).once('value')).val();
+        if (myUserData && myUserData.createdBy) {
+            const tsmUsername = myUserData.createdBy;
+            const allMDRs = Object.values(users.mdr || {});
+            const siblingMDRs = allMDRs.filter(mdr => mdr.createdBy === tsmUsername && mdr.username !== loggedInUser.username);
+            siblingMDRs.forEach(mdr => {
+                mdrSelect.innerHTML += `<option value="${mdr.username}">${mdr.username}</option>`;
+            });
+        }
+    }
+    
+    async function shiftOutlet() {
+        const outletSl = document.getElementById('shift-outlet-select').value;
+        const targetMdrUsername = document.getElementById('shift-mdr-select').value;
+
+        if (!outletSl || !targetMdrUsername) {
+            alert('Please select both an outlet and an MDR.');
+            return;
+        }
+
+        if (confirm(`Are you sure you want to shift this outlet to ${targetMdrUsername}?`)) {
+            await database.ref(`reports/${outletSl}/createdBy`).set(targetMdrUsername);
+            alert('Outlet shifted successfully!');
+            showMdrContent('shift_outlet'); // Refresh dropdowns
+            renderDashboard();
+        }
+    }
+
+
+    // --- MODAL ---
+    function closeModal(modalId) {
+        document.getElementById(modalId).style.display = 'none';
+    }
+
+    // --- TSM: REPORT FILTERING AND EXPORTING ---
+    async function populateTsmFilters() {
+        const mdrFilter = document.getElementById('mdr-filter');
+        const marketFilter = document.getElementById('market-filter');
+        if (!mdrFilter || !marketFilter) return;
+
+        const users = await getUsers();
+        const reports = await getReports();
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+
+        // Populate MDR dropdown
+        const myMDRs = users.mdr ? Object.values(users.mdr).filter(mdr => mdr.createdBy === loggedInUser.username) : [];
+        mdrFilter.innerHTML = '<option value="all">All MDRs</option>';
+        myMDRs.forEach(mdr => {
+            mdrFilter.innerHTML += `<option value="${mdr.username}">${mdr.username}</option>`;
+        });
+
+        // Populate Market dropdown
+        const myMDRUsernames = myMDRs.map(mdr => mdr.username);
+        const allReportsForMyMDRs = Object.values(reports).filter(report => myMDRUsernames.includes(report.createdBy));
+        const uniqueMarkets = [...new Set(allReportsForMyMDRs.map(r => r.market).filter(Boolean))];
+        marketFilter.innerHTML = '<option value="all">All Markets</option>';
+        uniqueMarkets.forEach(market => {
+            marketFilter.innerHTML += `<option value="${market}">${market}</option>`;
+        });
+    }
+
+    async function filterReportsForTSM() {
+        const selectedMdr = document.getElementById('mdr-filter').value;
+        const selectedMarket = document.getElementById('market-filter').value;
+        const container = document.getElementById('filtered-reports-container');
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        
+        const reports = await getReports();
+        const users = await getUsers();
+
+        const myMDRUsernames = users.mdr ? Object.values(users.mdr).filter(mdr => mdr.createdBy === loggedInUser.username).map(mdr => mdr.username) : [];
+        let dataToRender = Object.values(reports).filter(r => myMDRUsernames.includes(r.createdBy));
+
+        if (selectedMdr !== 'all') {
+            dataToRender = dataToRender.filter(r => r.createdBy === selectedMdr);
+        }
+        if (selectedMarket !== 'all') {
+            dataToRender = dataToRender.filter(r => r.market === selectedMarket);
+        }
+        
+        renderFilteredTable(dataToRender, 'tsm');
+    }
+
+    // --- MDR: REPORT FILTERING AND EXPORTING ---
+    async function populateMdrFilters() {
+        const marketFilter = document.getElementById('mdr-market-filter');
+        const srFilter = document.getElementById('mdr-sr-filter');
+        if (!marketFilter || !srFilter) return;
+        
+        const reports = await getReports();
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+
+        const myReports = Object.values(reports).filter(r => r.createdBy === loggedInUser.username);
+        
+        // Populate Market dropdown
+        const uniqueMarkets = [...new Set(myReports.map(r => r.market).filter(Boolean))];
+        marketFilter.innerHTML = '<option value="all">All Markets</option>';
+        uniqueMarkets.forEach(market => {
+            marketFilter.innerHTML += `<option value="${market}">${market}</option>`;
+        });
+
+        // Populate SR Name dropdown
+        const uniqueSrNames = [...new Set(myReports.map(r => r.srname).filter(Boolean))];
+        srFilter.innerHTML = '<option value="all">All SR Names</option>';
+        uniqueSrNames.forEach(srName => {
+            srFilter.innerHTML += `<option value="${srName}">${srName}</option>`;
+        });
+    }
+
+    async function filterReportsForMDR() {
+        const selectedMarket = document.getElementById('mdr-market-filter').value;
+        const selectedSrName = document.getElementById('mdr-sr-filter').value;
+        const loggedInUser = JSON.parse(sessionStorage.getItem('loggedInUser'));
+        
+        const reports = await getReports();
+        let dataToRender = Object.values(reports).filter(r => r.createdBy === loggedInUser.username);
+
+        if (selectedMarket !== 'all') {
+            dataToRender = dataToRender.filter(r => r.market === selectedMarket);
+        }
+        if (selectedSrName !== 'all') {
+            dataToRender = dataToRender.filter(r => r.srname === selectedSrName);
+        }
+        
+        renderFilteredTable(dataToRender, 'mdr');
+    }
+
+    // --- COMMON: FILTERED TABLE RENDERING & EXPORT ---
+    function renderFilteredTable(data, role) { // role is 'tsm' or 'mdr'
+        const containerId = role === 'tsm' ? 'filtered-reports-container' : 'mdr-filtered-reports-container';
+        const container = document.getElementById(containerId);
+        if (!container) return;
+
+        if (data.length === 0) {
+            container.innerHTML = '<p>No reports found for the selected criteria.</p>';
+            return;
+        }
+
+        let headers = ['SL', 'QR Code No', 'Outlet Name', 'Address', 'Mobile No', 'SP', 'MO', 'TS', 'Jelly', 'Noodles', 'GH', 'U.Milk', 'Swift', 'RAY', 'Glitter', 'Staysafe', 'Rice', 'HF', 'Working day', 'SR Name', 'Market'];
+        if (role === 'tsm') {
+            headers.push('MDR');
+        }
+
+        const numericCols = ['sp', 'mo', 'ts', 'jelly', 'noodles', 'gh', 'umilk', 'swift', 'ray', 'glitter', 'staysafe', 'rice', 'hf'];
+        const totals = {};
+        numericCols.forEach(key => totals[key] = 0);
+
+        let tableBody = '';
+        data.forEach((report) => {
+             let rowHtml = '<tr>';
+             headers.forEach(header => {
+                const key = header.toLowerCase().replace(/[.\s-]/g, '');
+                let value = '';
+                if (key === 'outletname') value = report['outlet'] || '';
+                else if (key === 'mdr') value = report['createdBy'] || '';
+                else value = report[key] || '';
+                
+                if (numericCols.includes(key)) {
+                    totals[key] += Number(value) || 0;
+                }
+                rowHtml += `<td>${value}</td>`;
+             });
+             tableBody += rowHtml + '</tr>';
+        });
+
+        let footer = '<tfoot><tr>' + headers.map(header => {
+             const key = header.toLowerCase().replace(/[.\s-]/g, '');
+             if (key === 'sl') return `<td>Total</td>`;
+             if (numericCols.includes(key)) return `<td>${totals[key]}</td>`;
+             return `<td></td>`;
+        }).join('') + '</tr></tfoot>';
+        
+        // Escape single quotes in data for the JSON string in onclick
+        const escapedData = JSON.stringify(data).replace(/'/g, "\\'");
+
+        container.innerHTML = `
+            <button class="btn btn-secondary" style="margin-bottom: 10px;" onclick='exportToXLSX(${escapedData}, "${role}")'>Export to XLSX</button>
+            <div class="table-container">
+                <table>
+                    <thead><tr>${headers.map(h => `<th>${h}</th>`).join('')}</tr></thead>
+                    <tbody>${tableBody}</tbody>
+                    ${footer}
+                </table>
+            </div>`;
+    }
+    
+    function exportToXLSX(data, role) {
+        if (!data || data.length === 0) {
+            alert('No data to export.');
+            return;
+        }
+
+        const worksheetData = data.map(r => {
+            const row = {
+                'SL': r.sl, 'QR Code No': r.qr, 'Outlet Name': r.outlet, 'Address': r.address, 
+                'Mobile No': r.mobile, 'SP': r.sp, 'MO': r.mo, 'TS': r.ts, 'Jelly': r.jelly, 
+                'Noodles': r.noodles, 'GH': r.gh, 'U.Milk': r.umilk, 'Swift': r.swift, 
+                'RAY': r.ray, 'Glitter': r.glitter, 'Staysafe': r.staysafe, 'Rice': r.rice, 
+                'HF': r.hf, 'Working day': r.workingday, 'SR Name': r.srname, 'Market': r.market, 
+            };
+            if (role === 'tsm') {
+                row['Created By (MDR)'] = r.createdBy;
+            }
+            return row;
+        });
+
+        const worksheet = XLSX.utils.json_to_sheet(worksheetData);
+        const workbook = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(workbook, worksheet, "Filtered Reports");
+
+        const fileName = role === 'tsm' ? "TSM_Filtered_Report.xlsx" : "MDR_Filtered_Report.xlsx";
+        XLSX.writeFile(workbook, fileName);
+    }
+
+</script>
+</body>
+</html>
